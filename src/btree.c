@@ -10,8 +10,6 @@ void btree(){
 
 
 
-
-
 }
 
 int nombreNoedsNiveau(node *root, int N){
