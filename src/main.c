@@ -7,7 +7,7 @@
 int main(int argc, char* argv[], char* envp[]) {
     Table table;
     initialize_table(&table);
-    read_rows_from_csv(&table);  // Chargement des données existantes
+    rrows(&table);  // Chargement des données existantes
     
     repl(&table);  // Lancer la REPL avec la table en mémoire
     return 0;

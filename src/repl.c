@@ -28,6 +28,7 @@ typedef struct {
 
 typedef struct {
   StatementType type;
+  Row row_to_insert;  // Nouveau champ pour stocker la ligne à insérer
 } Statement;
 
 typedef struct {
@@ -91,7 +92,7 @@ void wrows(Row* row) {
     fclose(file);
 }
 
-// Chargement des données depuis le CSV
+// Chargement des données depuis le CSV avec le read
 void rrows(Table* table) {
     FILE* file = fopen("database.csv", "r");
     if (file == NULL) {
@@ -113,26 +114,57 @@ MetaCommandResult do_meta_command(InputBuffer* input_buffer) {
     return META_COMMAND_UNRECOGNIZED_COMMAND;
   }
 }
-
 PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement) {
-  if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
-    statement->type = STATEMENT_INSERT;
-    return PREPARE_SUCCESS;
-  }
-  if (strcmp(input_buffer->buffer, "select") == 0) {
-    statement->type = STATEMENT_SELECT;
-    return PREPARE_SUCCESS;
-  }
-  return PREPARE_UNRECOGNIZED_STATEMENT;
+    if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
+        statement->type = STATEMENT_INSERT;
+        
+        // je commence a implementer le insert avec comme commande  ala suite le ID, username et le mail
+        int id;
+        char username[COLUMN_USERNAME_SIZE];
+        char email[COLUMN_EMAIL_SIZE];
+        
+        int args_assigned = sscanf(input_buffer->buffer, "insert %d %31s %254s", &id, username, email);
+        if (args_assigned < 3) {
+            return PREPARE_UNRECOGNIZED_STATEMENT;
+        }
+
+        statement->row_to_insert.id = id;
+        strncpy(statement->row_to_insert.username, username, COLUMN_USERNAME_SIZE);
+        strncpy(statement->row_to_insert.email, email, COLUMN_EMAIL_SIZE);
+        
+        return PREPARE_SUCCESS;
+    }
+    if (strcmp(input_buffer->buffer, "select") == 0) {
+        statement->type = STATEMENT_SELECT;
+        return PREPARE_SUCCESS;
+    }
+    return PREPARE_UNRECOGNIZED_STATEMENT;
 }
+
+
+void insert_row(Table* table, Row* row) {
+    if (table->num_rows >= 100) {
+        printf("Table is full. Cannot insert more rows.\n");
+        return;
+    }
+    
+    // Ajoute la ligne dans la table
+    table->rows[table->num_rows] = *row;
+    table->num_rows++;
+    wrows(row);
+}
+
 
 // Exécution des commandes SQL
 void execute_statement(Statement* statement, Table* table) {
     switch (statement->type) {
         case (STATEMENT_INSERT):
-            // todo
+            insert_row(table, &statement->row_to_insert);
+            printf("Row inserted.\n");
             break;
         case (STATEMENT_SELECT):
+            rrows(table);
+
             for (size_t i = 0; i < table->num_rows; i++) {
                 Row* row = &(table->rows[i]);
                 printf("(%d, %s, %s)\n", row->id, row->username, row->email);
